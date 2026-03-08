@@ -1,0 +1,10 @@
+{
+  "defaultNoteFolder": "",
+  "noteTemplate": "",
+  "enableClustering": false,
+  "clusterThreshold": 80,
+  "defaultZoom": 0.75,
+  "showGrid": false,
+  "gridSize": 100,
+  "gridType": "hex-vertical"
+}

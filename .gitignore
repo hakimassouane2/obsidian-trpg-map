@@ -1,0 +1,22 @@
+# Build output
+main.js
+*.js.map
+
+# npm
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# BMAD
+_bmad-output/
+.opencode/
+
+# Map cache (generated locally, not synced)
+.map-cache/

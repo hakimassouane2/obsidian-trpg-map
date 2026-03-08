@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-trpg-maps",
+  "name": "TRPG Maps",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Interactive maps with customizable pins for tabletop RPG. Create maps from images, add pins with icons and colors, and link pins to your notes.",
+  "author": "Hakim",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
