@@ -1811,3 +1811,168 @@ svg.leaflet-image-layer.leaflet-interactive path {
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+/* ========================================
+   Map Labels
+   ======================================== */
+
+/* Label marker on the map */
+.trpg-label-marker {
+  background: transparent !important;
+  border: none !important;
+  white-space: nowrap;
+  overflow: visible !important;
+}
+
+.trpg-label-text {
+  white-space: nowrap;
+  line-height: 1.2;
+  cursor: grab;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.trpg-label-text:active {
+  cursor: grabbing;
+}
+
+.trpg-label-svg {
+  overflow: visible;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.trpg-label-svg:active {
+  cursor: grabbing;
+}
+
+/* Label preview in modal */
+.trpg-label-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70px;
+  margin-bottom: 16px;
+  padding: 20px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+}
+
+.trpg-label-preview-text {
+  line-height: 1.2;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+/* Label modal - full width */
+.trpg-label-modal {
+  width: 500px;
+  max-width: 90vw;
+}
+
+.trpg-label-modal .setting-item {
+  padding: 12px 0;
+}
+
+.trpg-label-modal .setting-item-control {
+  flex-shrink: 0;
+}
+
+/* ========================================
+   Pill Button Group (Font / Size / Style)
+   ======================================== */
+
+.trpg-btn-group {
+  display: flex;
+  gap: 6px;
+}
+
+.trpg-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  background-color: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  transition: all 0.15s ease;
+  min-width: 44px;
+  justify-content: center;
+  line-height: 1.4;
+}
+
+.trpg-btn-pill:hover {
+  background-color: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.trpg-btn-pill.active {
+  background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.trpg-btn-pill-sample {
+  font-size: 14px;
+}
+
+.trpg-btn-pill-label {
+  font-size: 11px;
+}
+
+.trpg-btn-pill.active .trpg-btn-pill-label,
+.trpg-btn-pill.active .trpg-btn-pill-sample {
+  color: var(--text-on-accent);
+}
+
+/* ========================================
+   Slider Controls (Stroke / Rotation / Curve)
+   ======================================== */
+
+.trpg-slider {
+  width: 140px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--background-modifier-border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.trpg-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.trpg-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.trpg-slider-value {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-right: 8px;
+}

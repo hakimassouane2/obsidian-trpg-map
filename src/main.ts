@@ -9,6 +9,7 @@ import type { TRPGMapsSettings } from './types';
 import { DEFAULT_SETTINGS, VIEW_TYPE_MAP, LOG_PREFIX } from './constants';
 import { MapView } from './MapView';
 import { PinManager } from './PinManager';
+import { LabelManager } from './LabelManager';
 import { TRPGMapsSettingsTab } from './SettingsTab';
 import { parseFrontmatter } from './utils/frontmatter';
 import { loadFAProCSS, unloadFAProCSS } from './data/fontawesome-pro';
@@ -18,6 +19,7 @@ import { loadFAProCSS, unloadFAProCSS } from './data/fontawesome-pro';
 export default class TRPGMapsPlugin extends Plugin {
   settings: TRPGMapsSettings = DEFAULT_SETTINGS;
   pinManager!: PinManager;
+  labelManager!: LabelManager;
 
   async onload(): Promise<void> {
     console.log(LOG_PREFIX, 'Loading plugin...');
@@ -28,8 +30,9 @@ export default class TRPGMapsPlugin extends Plugin {
     // Load settings
     await this.loadSettings();
 
-    // Initialize PinManager
+    // Initialize PinManager and LabelManager
     this.pinManager = new PinManager(this.app);
+    this.labelManager = new LabelManager(this.app);
 
     // Register the map view
     this.registerView(VIEW_TYPE_MAP, (leaf) => new MapView(leaf, this));

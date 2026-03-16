@@ -27,6 +27,8 @@ export interface MapControlsOptions {
   onToggleSearch?: () => void;
   /** Callback when backlinks panel toggled */
   onToggleBacklinks?: () => void;
+  /** Callback when labels visibility toggled */
+  onToggleLabels?: () => void;
 }
 
 export class MapControls {
@@ -41,9 +43,11 @@ export class MapControls {
   private layersButton: HTMLElement | null = null;
   private searchButton: HTMLElement | null = null;
   private backlinksButton: HTMLElement | null = null;
+  private labelsButton: HTMLElement | null = null;
   private layersActive = false;
   private searchActive = false;
   private backlinksActive = false;
+  private labelsActive = true;
 
   constructor(map: L.Map, parentContainer: HTMLElement, options: MapControlsOptions) {
     this.map = map;
@@ -104,6 +108,17 @@ export class MapControls {
         'Backlinks panel',
         () => this.toggleBacklinks()
       );
+    }
+
+    // Labels visibility toggle
+    if (this.options.onToggleLabels) {
+      this.labelsButton = this.createButton(
+        'text',
+        'Toggle labels',
+        () => this.toggleLabels()
+      );
+      // Labels are visible by default
+      this.labelsButton.addClass('active');
     }
 
     // Separator
@@ -221,6 +236,23 @@ export class MapControls {
     }
   }
 
+  private toggleLabels(): void {
+    this.labelsActive = !this.labelsActive;
+    this.options.onToggleLabels?.();
+
+    if (this.labelsButton) {
+      this.labelsButton.toggleClass('active', this.labelsActive);
+    }
+  }
+
+  /** Update labels button active state */
+  setLabelsActive(active: boolean): void {
+    this.labelsActive = active;
+    if (this.labelsButton) {
+      this.labelsButton.toggleClass('active', active);
+    }
+  }
+
   /** Update lock state from external source */
   setLockState(locked: boolean): void {
     this.pinsLocked = locked;
@@ -251,6 +283,7 @@ export class MapControls {
       'search': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
       'backlinks': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"></path><path d="M15 7h2a5 5 0 1 1 0 10h-2"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>',
       'locate': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>',
+      'text': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
     };
     return icons[icon] || '';
   }

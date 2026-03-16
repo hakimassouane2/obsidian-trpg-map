@@ -4,7 +4,7 @@
 
 import { ItemView, WorkspaceLeaf, TFile, Notice, Menu } from 'obsidian';
 import * as L from 'leaflet';
-import type { Pin, MapData } from './types';
+import type { Pin, Label, MapData } from './types';
 
 // leaflet.markercluster needs L to be global
 // Set it before requiring the plugin
@@ -28,6 +28,9 @@ import { SearchPanel } from './components/SearchPanel';
 import { BacklinksPanel } from './components/BacklinksPanel';
 import { CreatePinModal } from './modals/CreatePinModal';
 import { EditPinModal } from './modals/EditPinModal';
+import { CreateLabelModal } from './modals/CreateLabelModal';
+import { EditLabelModal } from './modals/EditLabelModal';
+import { createLabelMarker, updateLabelMarkerIcon } from './components/LabelMarker';
 
 export class MapView extends ItemView {
   static VIEW_TYPE = VIEW_TYPE_MAP;
@@ -42,6 +45,9 @@ export class MapView extends ItemView {
   private imageWidth = 0;
   private imageHeight = 0;
   private markers: Map<string, L.Marker> = new Map();
+  private labelsLayer: L.LayerGroup | null = null;
+  private labelMarkers: Map<string, L.Marker> = new Map();
+  private labelsVisible = true;
   private gridOverlay: GridOverlay | null = null;
   private mapControls: MapControls | null = null;
   private layersPanel: LayersPanel | null = null;
@@ -128,6 +134,8 @@ export class MapView extends ItemView {
     this.imageOverlay = null;
     this.markersLayer = null;
     this.markers.clear();
+    this.labelsLayer = null;
+    this.labelMarkers.clear();
     this.mapContainer = null;
     this.visibleTags = null;
   }
@@ -152,7 +160,7 @@ export class MapView extends ItemView {
 
       this.currentFile = file;
       // Update the tab title and view header title
-      this.leaf.updateHeader();
+      (this.leaf as any).updateHeader();
 
       // Also update the view header title container (Obsidian doesn't always refresh it)
       const titleContainer = this.containerEl.querySelector('.view-header-title-container .view-header-title');
@@ -235,6 +243,9 @@ export class MapView extends ItemView {
     // Load pins
     this.loadPins();
 
+    // TODO: Labels feature hidden for now
+    // this.loadLabels();
+
     // Initialize grid overlay if enabled
     this.initGridOverlay();
 
@@ -248,17 +259,37 @@ export class MapView extends ItemView {
   private async loadMapImage(): Promise<void> {
     if (!this.map || !this.mapData) return;
 
-    const imagePath = this.mapData['map-image'];
-    if (!imagePath) {
+    const rawValue = this.mapData['map-image'];
+    if (!rawValue) {
       throw new Error('Map image path not specified in frontmatter. Add map-image: "path/to/image.png" to your frontmatter.');
     }
 
+    // Obsidian parses [[link]] in YAML as an array ["link"], normalize to string
+    const imagePath = Array.isArray(rawValue) ? String(rawValue[0]) : String(rawValue);
+
     console.log(LOG_PREFIX, 'Loading image:', imagePath);
 
-    // Get the image file
-    const imageFile = this.app.vault.getAbstractFileByPath(imagePath);
-    if (!(imageFile instanceof TFile)) {
-      throw new Error(`Map image not found: ${imagePath}. Make sure the path is relative to your vault root.`);
+    // Resolve image path: try direct path first, then resolve as link name
+    let imageFile: TFile | null = null;
+    const wikilinkMatch = imagePath.match(/^\[\[(.+)\]\]$/);
+    const linkText = wikilinkMatch ? wikilinkMatch[1] : imagePath;
+
+    // Try direct path first
+    const abstract = this.app.vault.getAbstractFileByPath(linkText);
+    if (abstract instanceof TFile) {
+      imageFile = abstract;
+    }
+
+    // Fallback: resolve as link (handles bare filenames and wikilinks stripped by Obsidian)
+    if (!imageFile) {
+      const resolved = this.app.metadataCache.getFirstLinkpathDest(linkText, this.currentFile?.path ?? '');
+      if (resolved instanceof TFile) {
+        imageFile = resolved;
+      }
+    }
+
+    if (!imageFile) {
+      throw new Error(`Map image not found: ${imagePath}. Make sure the path is correct (supports wikilinks like [[image]] or full paths like folder/image.png).`);
     }
 
     // Get image URL
@@ -405,6 +436,8 @@ export class MapView extends ItemView {
       onToggleLayers: () => this.toggleLayersPanel(),
       onToggleSearch: () => this.toggleSearchPanel(),
       onToggleBacklinks: () => this.toggleBacklinksPanel(),
+      // TODO: Labels feature hidden for now
+      // onToggleLabels: () => this.toggleLabelsVisibility(),
     });
     
     // Initialize layers panel
@@ -593,8 +626,8 @@ export class MapView extends ItemView {
    */
   private setLockPins(locked: boolean): void {
     this.pinsLocked = locked;
-    
-    // Update all markers' draggable state
+
+    // Update all pin markers' draggable state
     this.markers.forEach((marker) => {
       if (locked) {
         marker.dragging?.disable();
@@ -602,8 +635,17 @@ export class MapView extends ItemView {
         marker.dragging?.enable();
       }
     });
-    
-    console.log(LOG_PREFIX, 'Pins locked:', locked);
+
+    // Update all label markers' draggable state
+    this.labelMarkers.forEach((marker) => {
+      if (locked) {
+        marker.dragging?.disable();
+      } else {
+        marker.dragging?.enable();
+      }
+    });
+
+    console.log(LOG_PREFIX, 'Pins/labels locked:', locked);
   }
 
   /**
@@ -831,6 +873,14 @@ export class MapView extends ItemView {
         .onClick(() => this.createNewPin(coords.x, coords.y))
     );
 
+    // TODO: Labels feature hidden for now
+    // menu.addItem((item) =>
+    //   item
+    //     .setTitle('New label')
+    //     .setIcon('type')
+    //     .onClick(() => this.createNewLabel(coords.x, coords.y))
+    // );
+
     menu.showAtMouseEvent(event.originalEvent);
   }
 
@@ -996,6 +1046,197 @@ export class MapView extends ItemView {
     } catch (error) {
       console.error(LOG_PREFIX, 'Failed to create note from pin:', error);
       new Notice('Failed to create note');
+    }
+  }
+
+  // =============================================
+  // Label Methods
+  // =============================================
+
+  /**
+   * Load and display all labels from map data
+   */
+  private loadLabels(): void {
+    if (!this.map || !this.mapData) return;
+
+    // Create labels layer (separate from pins, no clustering)
+    if (this.labelsLayer) {
+      this.labelsLayer.remove();
+    }
+    this.labelsLayer = L.layerGroup().addTo(this.map);
+    this.labelMarkers.clear();
+
+    const labels = this.mapData.labels ?? [];
+    console.log(LOG_PREFIX, 'Loading', labels.length, 'labels');
+
+    for (const label of labels) {
+      this.addLabelMarker(label);
+    }
+  }
+
+  /**
+   * Add a single label marker to the map
+   */
+  private addLabelMarker(label: Label): void {
+    if (!this.labelsLayer) return;
+
+    const marker = createLabelMarker(label, this.imageHeight, {
+      draggable: !this.pinsLocked,
+      onDragEnd: (l, newX, newY) => this.handleLabelDragEnd(l, newX, newY),
+      onContextMenu: (l, event) => this.handleLabelContextMenu(l, event),
+      onDblClick: (l) => this.editLabel(l),
+    });
+
+    marker.addTo(this.labelsLayer);
+    this.labelMarkers.set(label.id, marker);
+  }
+
+  /**
+   * Create a new label at the specified coordinates
+   */
+  private createNewLabel(x: number, y: number): void {
+    const modal = new CreateLabelModal(this.app, { x, y }, async (labelData) => {
+      try {
+        const newLabel = await this.plugin.labelManager.createLabel(this.currentFile!, labelData);
+
+        if (!this.mapData!.labels) {
+          this.mapData!.labels = [];
+        }
+        this.mapData!.labels.push(newLabel);
+
+        this.addLabelMarker(newLabel);
+
+        new Notice(`Label "${newLabel.text}" created`);
+      } catch (error) {
+        console.error(LOG_PREFIX, 'Failed to create label:', error);
+        new Notice('Failed to create label');
+      }
+    });
+
+    modal.open();
+  }
+
+  /**
+   * Edit an existing label
+   */
+  private editLabel(label: Label): void {
+    // Get fresh label data
+    const currentLabel = this.mapData?.labels?.find((l) => l.id === label.id) ?? label;
+
+    const modal = new EditLabelModal(this.app, currentLabel, async (updatedLabel) => {
+      try {
+        await this.plugin.labelManager.updateLabel(this.currentFile!, updatedLabel);
+
+        // Update local map data
+        if (this.mapData?.labels) {
+          const index = this.mapData.labels.findIndex((l) => l.id === label.id);
+          if (index !== -1) {
+            this.mapData.labels[index] = updatedLabel;
+          }
+        }
+
+        // Update marker on map
+        const marker = this.labelMarkers.get(label.id);
+        if (marker) {
+          updateLabelMarkerIcon(marker, updatedLabel);
+        }
+
+        new Notice(`Label "${updatedLabel.text}" updated`);
+      } catch (error) {
+        console.error(LOG_PREFIX, 'Failed to update label:', error);
+        new Notice('Failed to update label');
+      }
+    });
+
+    modal.open();
+  }
+
+  /**
+   * Delete a label
+   */
+  private async deleteLabel(label: Label): Promise<void> {
+    try {
+      await this.plugin.labelManager.deleteLabel(this.currentFile!, label.id);
+
+      if (this.mapData?.labels) {
+        this.mapData.labels = this.mapData.labels.filter((l) => l.id !== label.id);
+      }
+
+      const marker = this.labelMarkers.get(label.id);
+      if (marker) {
+        marker.remove();
+        this.labelMarkers.delete(label.id);
+      }
+
+      new Notice(`Label "${label.text}" deleted`);
+    } catch (error) {
+      console.error(LOG_PREFIX, 'Failed to delete label:', error);
+      new Notice('Failed to delete label');
+    }
+  }
+
+  /**
+   * Handle right-click on a label
+   */
+  private handleLabelContextMenu(label: Label, event: L.LeafletMouseEvent): void {
+    const currentLabel = this.mapData?.labels?.find((l) => l.id === label.id) ?? label;
+
+    const menu = new Menu();
+
+    menu.addItem((item) =>
+      item
+        .setTitle('Edit label')
+        .setIcon('pencil')
+        .onClick(() => this.editLabel(currentLabel))
+    );
+
+    menu.addItem((item) =>
+      item
+        .setTitle('Delete label')
+        .setIcon('trash')
+        .onClick(() => this.deleteLabel(currentLabel))
+    );
+
+    menu.showAtMouseEvent(event.originalEvent);
+  }
+
+  /**
+   * Handle label drag end
+   */
+  private async handleLabelDragEnd(label: Label, newX: number, newY: number): Promise<void> {
+    try {
+      const updatedLabel: Label = { ...label, x: newX, y: newY };
+      await this.plugin.labelManager.updateLabel(this.currentFile!, updatedLabel);
+
+      const existingLabel = this.mapData?.labels?.find((l) => l.id === label.id);
+      if (existingLabel) {
+        existingLabel.x = newX;
+        existingLabel.y = newY;
+      }
+    } catch (error) {
+      console.error(LOG_PREFIX, 'Failed to update label position:', error);
+      new Notice('Failed to save label position');
+
+      const marker = this.labelMarkers.get(label.id);
+      if (marker) {
+        const { imageToLatLng } = await import('./utils/coordinates');
+        marker.setLatLng(imageToLatLng(label.x, label.y, this.imageHeight));
+      }
+    }
+  }
+
+  /**
+   * Toggle labels visibility
+   */
+  private toggleLabelsVisibility(): void {
+    this.labelsVisible = !this.labelsVisible;
+
+    if (this.labelsLayer && this.map) {
+      if (this.labelsVisible) {
+        this.labelsLayer.addTo(this.map);
+      } else {
+        this.labelsLayer.remove();
+      }
     }
   }
 

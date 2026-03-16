@@ -33,6 +33,33 @@ export const PinIdSchema = z
   .string()
   .regex(/^pin-\d{3,}$/, 'Pin ID must be in format pin-XXX');
 
+/** Schema for label ID validation */
+export const LabelIdSchema = z
+  .string()
+  .regex(/^label-\d{3,}$/, 'Label ID must be in format label-XXX');
+
+/** Schema for label font family */
+export const LabelFontFamilySchema = z.enum(['sans', 'serif', 'mono']);
+
+/** Schema for label font size */
+export const LabelFontSizeSchema = z.enum(['small', 'medium', 'large']);
+
+/** Schema for a single label */
+export const LabelSchema = z.object({
+  id: LabelIdSchema,
+  text: z.string().min(1, 'Label text is required'),
+  x: z.number().int().min(0, 'X coordinate must be non-negative'),
+  y: z.number().int().min(0, 'Y coordinate must be non-negative'),
+  fontFamily: LabelFontFamilySchema.default('sans'),
+  fontSize: LabelFontSizeSchema.default('medium'),
+  bold: z.boolean().default(false),
+  italic: z.boolean().default(false),
+  color: HexColorSchema,
+  strokeWidth: z.number().min(0).max(10).default(0),
+  rotation: z.number().min(0).max(360).default(0),
+  curve: z.number().min(-100).max(100).default(0),
+});
+
 /** Schema for a single pin */
 export const PinSchema = z.object({
   id: PinIdSchema,
@@ -47,11 +74,12 @@ export const PinSchema = z.object({
 
 /** Schema for map frontmatter data */
 export const MapDataSchema = z.object({
-  'map-image': z.string().min(1, 'Map image path is required'),
+  'map-image': z.union([z.string().min(1), z.array(z.string()).min(1)]),
   'map-width': z.number().int().positive().optional(),
   'map-height': z.number().int().positive().optional(),
   'default-zoom': z.number().optional(),
   pins: z.array(PinSchema).optional().default([]),
+  labels: z.array(LabelSchema).optional().default([]),
 });
 
 /** Schema for plugin settings */
@@ -67,6 +95,7 @@ export const SettingsSchema = z.object({
 
 /** Type inference helpers */
 export type ValidatedPin = z.infer<typeof PinSchema>;
+export type ValidatedLabel = z.infer<typeof LabelSchema>;
 export type ValidatedMapData = z.infer<typeof MapDataSchema>;
 export type ValidatedSettings = z.infer<typeof SettingsSchema>;
 

@@ -2,7 +2,7 @@
  * Constants and default values for TRPG Maps plugin
  */
 
-import type { PinShape, TRPGMapsSettings } from './types';
+import type { PinShape, LabelFontFamily, LabelFontSize, TRPGMapsSettings } from './types';
 
 /** Plugin identifiers */
 export const PLUGIN_ID = 'obsidian-trpg-maps';
@@ -16,6 +16,9 @@ export const EVENTS = {
   PIN_DELETED: 'trpg-maps:pin-deleted',
   MAP_LOADED: 'trpg-maps:map-loaded',
   MAP_SAVED: 'trpg-maps:map-saved',
+  LABEL_CREATED: 'trpg-maps:label-created',
+  LABEL_UPDATED: 'trpg-maps:label-updated',
+  LABEL_DELETED: 'trpg-maps:label-deleted',
 } as const;
 
 /** Log prefix for console messages */
@@ -63,6 +66,28 @@ export const DEFAULT_COLORS: string[] = [
 
 /** Default pin color */
 export const DEFAULT_PIN_COLOR = '#3B82F6';
+
+/** Label font families */
+export const LABEL_FONT_FAMILIES: LabelFontFamily[] = ['sans', 'serif', 'mono'];
+
+/** Label font sizes */
+export const LABEL_FONT_SIZES: LabelFontSize[] = ['small', 'medium', 'large'];
+
+/** Label font size in pixels for each size option */
+export const LABEL_FONT_SIZE_PX: Record<LabelFontSize, number> = {
+  small: 14,
+  medium: 20,
+  large: 28,
+};
+
+/** Default label color */
+export const DEFAULT_LABEL_COLOR = '#FFFFFF';
+
+/** Default label font family */
+export const DEFAULT_LABEL_FONT_FAMILY: LabelFontFamily = 'sans';
+
+/** Default label font size */
+export const DEFAULT_LABEL_FONT_SIZE: LabelFontSize = 'medium';
 
 /** Default pin shape */
 export const DEFAULT_PIN_SHAPE: PinShape = 'pin';

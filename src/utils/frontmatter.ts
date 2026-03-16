@@ -3,7 +3,7 @@
  */
 
 import { App, TFile, parseYaml, stringifyYaml } from 'obsidian';
-import type { MapData, Pin } from '../types';
+import type { MapData, Pin, Label } from '../types';
 import { LOG_PREFIX } from '../constants';
 
 /**
@@ -175,6 +175,97 @@ export function generatePinId(existingPins: Pin[]): string {
 
   const newNum = maxNum + 1;
   return `pin-${newNum.toString().padStart(3, '0')}`;
+}
+
+/**
+ * Add a label to the frontmatter
+ */
+export async function addLabelToFrontmatter(
+  app: App,
+  file: TFile,
+  label: Label
+): Promise<void> {
+  const content = await app.vault.read(file);
+  const mapData = parseFrontmatter(content);
+
+  if (!mapData) {
+    throw new Error('Invalid map file: missing frontmatter');
+  }
+
+  const labels = mapData.labels ?? [];
+  labels.push(label);
+  mapData.labels = labels;
+
+  await updateFrontmatter(app, file, mapData);
+}
+
+/**
+ * Update a label in the frontmatter
+ */
+export async function updateLabelInFrontmatter(
+  app: App,
+  file: TFile,
+  label: Label
+): Promise<void> {
+  const content = await app.vault.read(file);
+  const mapData = parseFrontmatter(content);
+
+  if (!mapData) {
+    throw new Error('Invalid map file: missing frontmatter');
+  }
+
+  const labels = mapData.labels ?? [];
+  const index = labels.findIndex((l) => l.id === label.id);
+
+  if (index === -1) {
+    throw new Error(`Label not found: ${label.id}`);
+  }
+
+  labels[index] = label;
+  mapData.labels = labels;
+
+  await updateFrontmatter(app, file, mapData);
+}
+
+/**
+ * Remove a label from the frontmatter
+ */
+export async function removeLabelFromFrontmatter(
+  app: App,
+  file: TFile,
+  labelId: string
+): Promise<void> {
+  const content = await app.vault.read(file);
+  const mapData = parseFrontmatter(content);
+
+  if (!mapData) {
+    throw new Error('Invalid map file: missing frontmatter');
+  }
+
+  const labels = mapData.labels ?? [];
+  mapData.labels = labels.filter((l) => l.id !== labelId);
+
+  await updateFrontmatter(app, file, mapData);
+}
+
+/**
+ * Generate a new unique label ID
+ */
+export function generateLabelId(existingLabels: Label[]): string {
+  let maxNum = 0;
+
+  for (const label of existingLabels) {
+    const match = label.id.match(/^label-(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+
+  const newNum = maxNum + 1;
+  return `label-${newNum.toString().padStart(3, '0')}`;
 }
 
 /**

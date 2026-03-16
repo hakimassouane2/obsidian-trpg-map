@@ -16,6 +16,40 @@ export type PinShape =
 /** Icon display mode for pins */
 export type IconDisplayMode = 'show' | 'hide' | 'icon-only';
 
+/** Font family options for labels */
+export type LabelFontFamily = 'sans' | 'serif' | 'mono';
+
+/** Font size options for labels */
+export type LabelFontSize = 'small' | 'medium' | 'large';
+
+/** Label data structure stored in YAML frontmatter */
+export interface Label {
+  /** Unique identifier (format: "label-XXX") */
+  id: string;
+  /** Display text of the label */
+  text: string;
+  /** X coordinate in image pixels (0 = left edge) */
+  x: number;
+  /** Y coordinate in image pixels (0 = top edge) */
+  y: number;
+  /** Font family: sans, serif, or mono */
+  fontFamily: LabelFontFamily;
+  /** Font size: small, medium, or large */
+  fontSize: LabelFontSize;
+  /** Whether text is bold */
+  bold: boolean;
+  /** Whether text is italic */
+  italic: boolean;
+  /** Text color as hex string with # prefix */
+  color: string;
+  /** Stroke width (0 = no stroke, 1-10) */
+  strokeWidth: number;
+  /** Rotation angle in degrees (0-360) */
+  rotation: number;
+  /** Curve/bend amount (-100 to 100, 0 = straight) */
+  curve: number;
+}
+
 /** Pin data structure stored in YAML frontmatter */
 export interface Pin {
   /** Unique identifier (format: "pin-XXX") */
@@ -42,8 +76,8 @@ export interface Pin {
 
 /** Map metadata stored in YAML frontmatter */
 export interface MapData {
-  /** Path to the map image file (relative to vault) */
-  'map-image': string;
+  /** Path to the map image file (relative to vault, or wikilink like [[name]]) */
+  'map-image': string | string[];
   /** Width of the map image in pixels */
   'map-width'?: number;
   /** Height of the map image in pixels */
@@ -52,6 +86,8 @@ export interface MapData {
   'default-zoom'?: number;
   /** Array of pins on this map */
   pins?: Pin[];
+  /** Array of text labels on this map */
+  labels?: Label[];
 }
 
 /** Grid type options */
@@ -80,6 +116,12 @@ export interface TRPGMapsSettings {
 /** Event payload for pin-related events */
 export interface PinEvent {
   pin: Pin;
+  source: 'user' | 'sync' | 'load';
+}
+
+/** Event payload for label-related events */
+export interface LabelEvent {
+  label: Label;
   source: 'user' | 'sync' | 'load';
 }
 
