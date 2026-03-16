@@ -175,34 +175,17 @@
   max-height: none !important;
 }
 
-/* Smooth zoom transitions for image and markers (when zoomAnimation is disabled) */
-.trpg-map .leaflet-image-layer {
-  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-  will-change: transform, width, height;
+/* SmoothWheelZoom handles continuous zoom via requestAnimationFrame — no CSS transitions needed */
+
+/* Pin scaling based on zoom level - scale the inner content, not the marker icon,
+   so that Leaflet's positioning/anchoring remains unaffected */
+.trpg-map {
+  --trpg-pin-scale: 1;
 }
 
-.trpg-map .leaflet-marker-icon,
-.trpg-map .leaflet-marker-shadow {
-  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-  will-change: transform;
-}
-
-/* Disable transitions while dragging so pins follow the cursor immediately */
-.trpg-map.trpg-dragging-pin .leaflet-marker-icon,
-.trpg-map.trpg-dragging-pin .leaflet-marker-shadow {
-  transition: none !important;
-}
-
-/* Also transition the panes themselves for smoother updates */
-.trpg-map .leaflet-overlay-pane,
-.trpg-map .leaflet-marker-pane,
-.trpg-map .leaflet-shadow-pane {
-  transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-/* Disable pane transitions while dragging a pin */
-.trpg-map.trpg-dragging-pin .leaflet-marker-pane {
-  transition: none;
+.trpg-map .trpg-pin-container {
+  transform: scale(var(--trpg-pin-scale));
+  transform-origin: center bottom;
 }
 
 .leaflet-pane > svg path.leaflet-interactive,
@@ -392,7 +375,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 
 .trpg-pin-container:hover {
-  transform: scale(1.15);
+  transform: scale(calc(var(--trpg-pin-scale, 1) * 1.15));
 }
 
 .trpg-pin-container svg {

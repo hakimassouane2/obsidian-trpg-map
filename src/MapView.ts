@@ -31,6 +31,7 @@ import { EditPinModal } from './modals/EditPinModal';
 import { CreateLabelModal } from './modals/CreateLabelModal';
 import { EditLabelModal } from './modals/EditLabelModal';
 import { createLabelMarker, updateLabelMarkerIcon } from './components/LabelMarker';
+import { SmoothWheelZoom } from './components/SmoothWheelZoom';
 
 export class MapView extends ItemView {
   static VIEW_TYPE = VIEW_TYPE_MAP;
@@ -49,12 +50,14 @@ export class MapView extends ItemView {
   private labelMarkers: Map<string, L.Marker> = new Map();
   private labelsVisible = true;
   private gridOverlay: GridOverlay | null = null;
+  private smoothWheelZoom: SmoothWheelZoom | null = null;
   private mapControls: MapControls | null = null;
   private layersPanel: LayersPanel | null = null;
   private searchPanel: SearchPanel | null = null;
   private backlinksPanel: BacklinksPanel | null = null;
   private pinsLocked = false;
   private clusteringEnabled = true;
+  private pinsVisible = true;
   private visibleTags: Set<string> | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: TRPGMapsPlugin) {
@@ -126,6 +129,10 @@ export class MapView extends ItemView {
     if (this.gridOverlay) {
       this.gridOverlay.destroy();
       this.gridOverlay = null;
+    }
+    if (this.smoothWheelZoom) {
+      this.smoothWheelZoom.disable();
+      this.smoothWheelZoom = null;
     }
     if (this.map) {
       this.map.remove();
@@ -214,15 +221,18 @@ export class MapView extends ItemView {
       crs: L.CRS.Simple,
       minZoom: LEAFLET_CONFIG.MIN_ZOOM,
       maxZoom: LEAFLET_CONFIG.MAX_ZOOM,
-      zoomSnap: LEAFLET_CONFIG.ZOOM_SNAP,
+      zoomSnap: 0, // Allow fully fractional zoom for smooth scrolling
       zoomDelta: LEAFLET_CONFIG.ZOOM_DELTA,
-      wheelPxPerZoomLevel: LEAFLET_CONFIG.WHEEL_PX_PER_ZOOM,
       attributionControl: false,
       zoomControl: false, // We use custom controls
       maxBoundsViscosity: 0, // No bounce back when dragging outside bounds
-      // Disable Leaflet's zoom animation - we use CSS transitions instead for smoother sync
+      scrollWheelZoom: false, // Disabled - we use SmoothWheelZoom instead
       zoomAnimation: false,
     });
+
+    // Enable smooth wheel zoom (rAF-based interpolation instead of discrete jumps)
+    this.smoothWheelZoom = new SmoothWheelZoom(this.map, { smoothSensitivity: 2.5 });
+    this.smoothWheelZoom.enable();
 
     // Set initial view to prevent "Set map center and zoom first" error
     this.map.setView([0, 0], 0);
@@ -246,6 +256,9 @@ export class MapView extends ItemView {
     // TODO: Labels feature hidden for now
     // this.loadLabels();
 
+    // Set up pin scaling on zoom changes
+    this.setupPinZoomScaling();
+
     // Initialize grid overlay if enabled
     this.initGridOverlay();
 
@@ -259,9 +272,9 @@ export class MapView extends ItemView {
   private async loadMapImage(): Promise<void> {
     if (!this.map || !this.mapData) return;
 
-    const rawValue = this.mapData['map-image'];
+    const rawValue = this.mapData['map'] ?? this.mapData['map-image'];
     if (!rawValue) {
-      throw new Error('Map image path not specified in frontmatter. Add map-image: "path/to/image.png" to your frontmatter.');
+      throw new Error('Map image path not specified in frontmatter. Add map: "path/to/image.png" to your frontmatter.');
     }
 
     // Obsidian parses [[link]] in YAML as an array ["link"], normalize to string
@@ -372,6 +385,51 @@ export class MapView extends ItemView {
   }
 
   /**
+   * Set up pin scaling based on zoom level.
+   * Pins stay normal size at zoom >= 0, shrink proportionally when zooming out.
+   */
+  private setupPinZoomScaling(): void {
+    if (!this.map) return;
+
+    // Listen to 'zoom' (fires every frame during smooth zoom) and 'zoomend' as fallback
+    this.map.on('zoom', () => this.updatePinScale());
+    this.map.on('zoomend', () => this.updatePinScale());
+    // Apply initial scale
+    this.updatePinScale();
+  }
+
+  /**
+   * Update pin scale based on current zoom level.
+   * At zoom 0+ pins are full size, at negative zoom they shrink at a reduced rate.
+   */
+  private updatePinScale(): void {
+    if (!this.map || !this.mapContainer) return;
+
+    const zoom = this.map.getZoom();
+    // Scale pins down when zoomed out (zoom < 0), keep at 1 when zoomed in
+    // Using a reduced exponent (0.4) so pins shrink more slowly than the map
+    const scale = zoom < 0 ? Math.pow(2, zoom * 0.4) : 1;
+    this.mapContainer.style.setProperty('--trpg-pin-scale', String(scale));
+  }
+
+  /**
+   * Toggle visibility of all pins at once
+   */
+  private toggleAllPins(): void {
+    this.pinsVisible = !this.pinsVisible;
+
+    if (this.markersLayer && this.map) {
+      if (this.pinsVisible) {
+        this.markersLayer.addTo(this.map);
+      } else {
+        this.markersLayer.remove();
+      }
+    }
+
+    this.mapControls?.setPinsVisibleState(this.pinsVisible);
+  }
+
+  /**
    * Initialize the grid overlay based on settings
    */
   private initGridOverlay(): void {
@@ -436,6 +494,7 @@ export class MapView extends ItemView {
       onToggleLayers: () => this.toggleLayersPanel(),
       onToggleSearch: () => this.toggleSearchPanel(),
       onToggleBacklinks: () => this.toggleBacklinksPanel(),
+      onToggleAllPins: () => this.toggleAllPins(),
       // TODO: Labels feature hidden for now
       // onToggleLabels: () => this.toggleLabelsVisibility(),
     });

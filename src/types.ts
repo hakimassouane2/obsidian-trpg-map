@@ -76,8 +76,10 @@ export interface Pin {
 
 /** Map metadata stored in YAML frontmatter */
 export interface MapData {
-  /** Path to the map image file (relative to vault, or wikilink like [[name]]) */
-  'map-image': string | string[];
+  /** Path to the map image file (relative to vault, or wikilink like [[name]]) - preferred short form */
+  'map'?: string | string[];
+  /** Path to the map image file (legacy, still supported for backward compatibility) */
+  'map-image'?: string | string[];
   /** Width of the map image in pixels */
   'map-width'?: number;
   /** Height of the map image in pixels */

@@ -282,7 +282,7 @@ export async function createMapFile(
   imagePath: string
 ): Promise<TFile> {
   const mapData: MapData = {
-    'map-image': imagePath,
+    'map': imagePath,
     pins: [],
   };
 

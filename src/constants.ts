@@ -96,9 +96,9 @@ export const DEFAULT_PIN_SHAPE: PinShape = 'pin';
 export const LEAFLET_CONFIG = {
   MIN_ZOOM: -2,
   MAX_ZOOM: 4,
-  ZOOM_SNAP: 0.25,
-  ZOOM_DELTA: 0.5,
-  WHEEL_PX_PER_ZOOM: 120,
+  ZOOM_SNAP: 0.05,
+  ZOOM_DELTA: 0.25,
+  WHEEL_PX_PER_ZOOM: 300,
 } as const;
 
 /** Pin marker configuration */

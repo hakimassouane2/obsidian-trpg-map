@@ -129,19 +129,19 @@ export default class TRPGMapsPlugin extends Plugin {
     try {
       const content = await this.app.vault.read(file);
       const mapData = parseFrontmatter(content);
-      return !!(mapData && mapData['map-image']);
+      return !!(mapData && (mapData['map'] || mapData['map-image']));
     } catch {
       return false;
     }
   }
 
   /**
-   * Check synchronously if file has map-image (cached metadata)
+   * Check synchronously if file has map/map-image (cached metadata)
    */
   hasMapImageSync(file: TFile): boolean {
     const cache = this.app.metadataCache.getFileCache(file);
     const frontmatter = cache?.frontmatter;
-    return !!(frontmatter && frontmatter['map-image']);
+    return !!(frontmatter && (frontmatter['map'] || frontmatter['map-image']));
   }
 
   async loadSettings(): Promise<void> {
@@ -240,7 +240,7 @@ export default class TRPGMapsPlugin extends Plugin {
       if (hasMap) {
         await this.openMapView(markdownView.file);
       } else {
-        new Notice('This file has no map-image in frontmatter');
+        new Notice('This file has no map property in frontmatter');
       }
       return;
     }

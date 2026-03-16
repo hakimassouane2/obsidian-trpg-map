@@ -27,6 +27,8 @@ export interface MapControlsOptions {
   onToggleSearch?: () => void;
   /** Callback when backlinks panel toggled */
   onToggleBacklinks?: () => void;
+  /** Callback when all pins visibility toggled */
+  onToggleAllPins?: () => void;
   /** Callback when labels visibility toggled */
   onToggleLabels?: () => void;
 }
@@ -44,9 +46,11 @@ export class MapControls {
   private searchButton: HTMLElement | null = null;
   private backlinksButton: HTMLElement | null = null;
   private labelsButton: HTMLElement | null = null;
+  private pinsVisibleButton: HTMLElement | null = null;
   private layersActive = false;
   private searchActive = false;
   private backlinksActive = false;
+  private pinsVisible = true;
   private labelsActive = true;
 
   constructor(map: L.Map, parentContainer: HTMLElement, options: MapControlsOptions) {
@@ -108,6 +112,17 @@ export class MapControls {
         'Backlinks panel',
         () => this.toggleBacklinks()
       );
+    }
+
+    // Toggle all pins visibility
+    if (this.options.onToggleAllPins) {
+      this.pinsVisibleButton = this.createButton(
+        'eye',
+        'Show/hide all pins',
+        () => this.toggleAllPins()
+      );
+      // Pins are visible by default
+      this.pinsVisibleButton.addClass('active');
     }
 
     // Labels visibility toggle
@@ -236,6 +251,27 @@ export class MapControls {
     }
   }
 
+  private toggleAllPins(): void {
+    this.pinsVisible = !this.pinsVisible;
+    this.options.onToggleAllPins?.();
+
+    if (this.pinsVisibleButton) {
+      this.pinsVisibleButton.innerHTML = this.getIconSvg(this.pinsVisible ? 'eye' : 'eye-off');
+      this.pinsVisibleButton.setAttribute('title', this.pinsVisible ? 'Hide all pins' : 'Show all pins');
+      this.pinsVisibleButton.toggleClass('active', this.pinsVisible);
+    }
+  }
+
+  /** Update pins visible button state */
+  setPinsVisibleState(visible: boolean): void {
+    this.pinsVisible = visible;
+    if (this.pinsVisibleButton) {
+      this.pinsVisibleButton.innerHTML = this.getIconSvg(visible ? 'eye' : 'eye-off');
+      this.pinsVisibleButton.setAttribute('title', visible ? 'Hide all pins' : 'Show all pins');
+      this.pinsVisibleButton.toggleClass('active', visible);
+    }
+  }
+
   private toggleLabels(): void {
     this.labelsActive = !this.labelsActive;
     this.options.onToggleLabels?.();
@@ -284,6 +320,8 @@ export class MapControls {
       'backlinks': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"></path><path d="M15 7h2a5 5 0 1 1 0 10h-2"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>',
       'locate': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>',
       'text': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
+      'eye': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+      'eye-off': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>',
     };
     return icons[icon] || '';
   }
