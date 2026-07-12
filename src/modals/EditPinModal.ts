@@ -2,54 +2,16 @@
  * Modal for editing an existing pin
  */
 
-import { App, Modal, Setting, TFile, AbstractInputSuggest } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import type { Pin, PinShape, IconDisplayMode } from '../types';
 import type TRPGMapsPlugin from '../main';
 import { DEFAULT_COLORS, PIN_SHAPES, CSS_PREFIX } from '../constants';
 import { getSvgForShape } from '../components/shapes';
 import { IconPickerModal } from './IconPickerModal';
 import { TagInput } from '../components/TagInput';
+import { NoteLinkSuggest } from '../components/NoteLinkSuggest';
 import { getIconColor } from '../utils/color';
 import { getFAProIconHtml } from '../data/fontawesome-pro';
-
-/**
- * Inline suggester for note links (appears below the input)
- */
-class NoteLinkSuggest extends AbstractInputSuggest<TFile> {
-  private files: TFile[];
-  private textInputEl: HTMLInputElement;
-  private onSelectCallback?: (file: TFile) => void;
-
-  constructor(app: App, inputEl: HTMLInputElement, onSelectCallback?: (file: TFile) => void) {
-    super(app, inputEl);
-    this.textInputEl = inputEl;
-    this.files = this.app.vault.getMarkdownFiles();
-    this.onSelectCallback = onSelectCallback;
-  }
-
-  getSuggestions(query: string): TFile[] {
-    const lowerQuery = query.toLowerCase();
-    return this.files
-      .filter(file => file.basename.toLowerCase().includes(lowerQuery))
-      .slice(0, 10);
-  }
-
-  renderSuggestion(file: TFile, el: HTMLElement): void {
-    el.createDiv({ cls: 'suggestion-content' }, (div) => {
-      div.createDiv({ cls: 'suggestion-title', text: file.basename });
-      if (file.parent && file.parent.path !== '/') {
-        div.createDiv({ cls: 'suggestion-note', text: file.parent.path });
-      }
-    });
-  }
-
-  selectSuggestion(file: TFile): void {
-    this.textInputEl.value = file.basename;
-    this.textInputEl.dispatchEvent(new Event('input'));
-    this.onSelectCallback?.(file);
-    this.close();
-  }
-}
 
 export class EditPinModal extends Modal {
   private plugin: TRPGMapsPlugin;
@@ -215,7 +177,7 @@ export class EditPinModal extends Modal {
     // Link input with inline autocomplete
     new Setting(contentEl)
       .setName('Link')
-      .setDesc('Link to an existing note (optional)')
+      .setDesc('Link to a note, or type "#" to link a specific heading (e.g. Otira#La forge)')
       .addText((text) => {
         text
           .setPlaceholder('Type to search notes...')
@@ -223,7 +185,7 @@ export class EditPinModal extends Modal {
           .onChange((value) => {
             this.link = value;
           });
-        
+
         new NoteLinkSuggest(this.app, text.inputEl);
       });
 
