@@ -90,7 +90,7 @@ export const DEFAULT_LABEL_FONT_FAMILY: LabelFontFamily = 'sans';
 export const DEFAULT_LABEL_FONT_SIZE: LabelFontSize = 'medium';
 
 /** Default pin shape */
-export const DEFAULT_PIN_SHAPE: PinShape = 'pin';
+export const DEFAULT_PIN_SHAPE: PinShape = 'diamond';
 
 /** Leaflet map configuration */
 export const LEAFLET_CONFIG = {
